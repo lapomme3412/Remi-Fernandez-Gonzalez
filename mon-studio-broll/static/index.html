@@ -156,8 +156,16 @@ $("btn-estimer").onclick = async ()=>{
   montrer("erreur",false); $("prix").textContent="Calcul en cours…";
   try{
     const d = await appeler("/api/estimer",formulaire());
-    $("prix").innerHTML = `Coût estimé : <strong>${usd(parseFloat(d.usd))}</strong> <span class="note">(${echapper(d.credits)} crédits)</span>`;
     $("json-requete").textContent=json(d.requete); $("json-reponse").textContent=json(d.reponse);
+    const dollars = parseFloat(d.usd), credits = d.credits!=null && d.credits!=="" ? d.credits : null;
+    if(Number.isFinite(dollars)){
+      $("prix").innerHTML = `Coût estimé : <strong>${usd(dollars)}</strong>`+(credits!==null?` <span class="note">(${echapper(credits)} crédits)</span>`:"");
+    } else if(credits!==null){
+      $("prix").innerHTML = `Coût estimé : <strong>${echapper(credits)} crédits</strong> <span class="note">(l'API n'a pas donné de prix en dollars)</span>`;
+    } else {
+      $("prix").textContent = "";
+      afficherErreur("L'API n'a renvoyé aucun prix pour cette demande. Ouvre « Voir la requête API » pour voir sa réponse exacte.");
+    }
   }catch(e){ $("prix").textContent=""; afficherErreur(e.message); }
 };
 
