@@ -159,9 +159,12 @@ $("btn-estimer").onclick = async ()=>{
     $("json-requete").textContent=json(d.requete); $("json-reponse").textContent=json(d.reponse);
     const dollars = parseFloat(d.usd), credits = d.credits!=null && d.credits!=="" ? d.credits : null;
     if(Number.isFinite(dollars)){
-      $("prix").innerHTML = `Coût estimé : <strong>${usd(dollars)}</strong>`+(credits!==null?` <span class="note">(${echapper(credits)} crédits)</span>`:"");
+      $("prix").innerHTML = `Coût estimé : <strong>${d.approx?"environ ":""}${usd(dollars)}</strong>`+(credits!==null?` <span class="note">(${echapper(credits)} crédits)</span>`:"")
+        +(d.approx?`<div class="note">Calculé d'après les tarifs par seconde donnés par l'API (le prix réel dépend des dimensions de la vidéo).</div>`:"");
     } else if(credits!==null){
       $("prix").innerHTML = `Coût estimé : <strong>${echapper(credits)} crédits</strong> <span class="note">(l'API n'a pas donné de prix en dollars)</span>`;
+    } else if(d.description){
+      $("prix").innerHTML = `Prix non calculable automatiquement. Tarifs donnés par l'API :<div class="note">${echapper(d.description)}</div>`;
     } else {
       $("prix").textContent = "";
       afficherErreur("L'API n'a renvoyé aucun prix pour cette demande. Ouvre « Voir la requête API » pour voir sa réponse exacte.");

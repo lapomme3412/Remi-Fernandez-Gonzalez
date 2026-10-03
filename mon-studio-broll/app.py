@@ -6,6 +6,7 @@ dans .env.local et n'est jamais affichée, journalisée ni renvoyée au navigate
 import json
 import mimetypes
 import os
+import re
 import threading
 import time
 import uuid
@@ -84,6 +85,24 @@ def estimer(application, arguments):
     return r.json()
 
 
+def calculer_prix(reponse, arguments):
+    """Renvoie (usd, approximatif). Certains modèles (ex. Seedance) ne donnent qu'une
+    description des tarifs « $X par seconde à 480p, $Y à 720p, $Z à 1080p » :
+    dans ce cas on calcule tarif × durée, et le résultat est approximatif."""
+    try:
+        return float(reponse["usd"]), False
+    except (KeyError, TypeError, ValueError):
+        pass
+    texte = (reponse or {}).get("pricing_description") or ""
+    m = re.search(r"\$([\d.]+) per second[^$]*?at 480p, \$([\d.]+) at 720p, and \$([\d.]+) at 1080p", texte)
+    if m and arguments.get("duration"):
+        tarifs = {"480p": float(m.group(1)), "720p": float(m.group(2)), "1080p": float(m.group(3))}
+        tarif = tarifs.get(arguments.get("resolution", "720p"))
+        if tarif:
+            return round(tarif * int(arguments["duration"]), 4), True
+    return None, False
+
+
 def message_http(r):
     try:
         d = r.json().get("detail")
@@ -144,7 +163,7 @@ def executer(tid, onglet, formulaire):
 
         cout = None
         try:
-            cout = float(estimer(modele["id"], arguments).get("usd"))
+            cout = calculer_prix(estimer(modele["id"], arguments), arguments)[0]
         except Exception:
             pass  # l'estimation est facultative pour générer
 
@@ -225,7 +244,9 @@ def api_estimer():
         image_url = url_publique_image(d.get("image", "")) if onglet == "animer" else None
         args = construire_arguments(onglet, d, image_url)
         rep = estimer(MODELES[onglet]["id"], args)
-        return jsonify(masquer({"usd": rep.get("usd"), "credits": rep.get("credits"),
+        usd, approx = calculer_prix(rep, args)
+        return jsonify(masquer({"usd": usd, "approx": approx, "credits": rep.get("credits"),
+                                "description": rep.get("pricing_description"),
                                 "requete": {"application": MODELES[onglet]["id"], "arguments": args},
                                 "reponse": rep}))
     except ValueError as e:
