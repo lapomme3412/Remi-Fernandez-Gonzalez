@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mon Studio B-roll</title>
+<style>
+:root{--fond:#0e0f13;--carte:#171922;--bord:#2a2d3a;--texte:#eceef5;--doux:#9aa0b4;--accent:#7c5cff;--accent2:#a48bff;--ok:#2fd18a;--err:#ff5d6c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--texte);font:16px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+.sous{color:var(--doux);margin:0 0 20px}
+.onglets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.onglet{flex:1;min-width:140px;padding:14px;border-radius:12px;border:1px solid var(--bord);background:var(--carte);color:var(--texte);font-size:17px;font-weight:600;cursor:pointer}
+.onglet.actif{background:var(--accent);border-color:var(--accent)}
+.carte{background:var(--carte);border:1px solid var(--bord);border-radius:16px;padding:20px;margin-bottom:16px}
+label{display:block;font-weight:600;margin:14px 0 6px}
+textarea{width:100%;min-height:150px;resize:vertical;padding:14px;border-radius:12px;border:1px solid var(--bord);background:#0e1016;color:var(--texte);font:inherit;font-size:17px}
+.choix{display:flex;gap:8px}
+.choix button{flex:1;padding:12px;border-radius:10px;border:1px solid var(--bord);background:#0e1016;color:var(--texte);font-size:16px;cursor:pointer}
+.choix button.actif{border-color:var(--accent2);background:#241f45}
+.rangee{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.gros{padding:16px 24px;border-radius:14px;border:0;font-size:19px;font-weight:700;cursor:pointer;color:#fff}
+.gros.prim{background:var(--accent)}.gros.sec{background:#2b2f42}
+.gros:disabled{opacity:.5;cursor:wait}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+.actions .gros{flex:1;min-width:180px}
+.note{color:var(--doux);font-size:14px;margin-top:6px}
+#prix{margin-top:14px;font-size:18px}
+.barre{height:14px;background:#0e1016;border-radius:99px;overflow:hidden;border:1px solid var(--bord);margin-top:10px}
+.barre i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .6s}
+.erreur{border-color:var(--err);color:#ffc4ca;background:#2a1519}
+.cache{display:none}
+.resultat img,.resultat video{width:100%;max-height:70vh;border-radius:12px;background:#000;object-fit:contain}
+a.gros{display:inline-block;text-decoration:none;text-align:center}
+details pre{background:#0b0c10;border:1px solid var(--bord);border-radius:10px;padding:12px;overflow:auto;font-size:13px;max-height:340px}
+summary{cursor:pointer;font-weight:600}
+.grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.vignette{background:#0e1016;border:1px solid var(--bord);border-radius:12px;overflow:hidden;font-size:13px}
+.vignette img,.vignette video{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:#000}
+.vignette div{padding:8px}
+.vignette.choisie{border-color:var(--accent2);outline:2px solid var(--accent2)}
+.vignette{cursor:default}.choix-image .vignette{cursor:pointer}
+#bandeau{background:#3a2c10;border:1px solid #7a5a1c;color:#ffd993;border-radius:12px;padding:12px 16px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<main>
+  <h1>🎬 Mon Studio B-roll</h1>
+  <p class="sous">Génère des images et des vidéos avec Higgsfield.</p>
+  <div id="bandeau" class="cache"></div>
+
+  <div class="onglets" id="onglets"></div>
+
+  <div class="carte">
+    <div id="zone-image" class="cache choix-image">
+      <label>1. Choisis l'image à animer (parmi tes images déjà générées)</label>
+      <div class="grille" id="images-dispo"></div>
+      <p class="note" id="aucune-image">Aucune image pour l'instant : génère-en une dans l'onglet « Image ».</p>
+    </div>
+
+    <label for="prompt">Description</label>
+    <textarea id="prompt" placeholder="Décris ce que tu veux voir…"></textarea>
+
+    <div class="rangee">
+      <div id="bloc-format"><label>Format</label>
+        <div class="choix" data-nom="format"><button data-v="16:9" class="actif">16:9</button><button data-v="9:16">9:16</button></div></div>
+      <div id="bloc-duree"><label>Durée</label>
+        <div class="choix" data-nom="duree"><button data-v="5" class="actif">5 secondes</button><button data-v="10">10 secondes</button></div></div>
+      <div id="bloc-resolution"><label>Résolution</label>
+        <div class="choix" data-nom="resolution"><button data-v="720p" class="actif">720p</button><button data-v="1080p">1080p</button></div></div>
+    </div>
+    <p class="note" id="note-modele"></p>
+
+    <div class="actions">
+      <button class="gros sec" id="btn-estimer">💲 Estimer le coût</button>
+      <button class="gros prim" id="btn-generer">✨ Générer</button>
+    </div>
+    <div id="prix"></div>
+  </div>
+
+  <div class="carte cache" id="progression">
+    <strong id="etape">…</strong> <span class="note" id="temps"></span>
+    <div class="barre"><i id="remplissage"></i></div>
+  </div>
+
+  <div class="carte erreur cache" id="erreur"></div>
+
+  <div class="carte resultat cache" id="resultat">
+    <div id="media"></div>
+    <div class="actions"><a class="gros prim" id="btn-telecharger" href="#">⬇ Télécharger</a></div>
+    <p class="note" id="info-resultat"></p>
+  </div>
+
+  <div class="carte"><details>
+    <summary>Voir la requête API</summary>
+    <p class="note">Requête envoyée (la clé n'apparaît jamais) :</p><pre id="json-requete">—</pre>
+    <p class="note">Réponse reçue :</p><pre id="json-reponse">—</pre>
+  </details></div>
+
+  <div class="carte">
+    <h2 style="margin-top:0">Historique</h2>
+    <p><strong id="total">Total dépensé : 0,00 $</strong> <span class="note">(coût estimé par l'API avant chaque génération réussie)</span></p>
+    <div class="grille" id="historique"></div>
+    <p class="note" id="historique-vide">Rien pour l'instant.</p>
+  </div>
+</main>
+
+<script>
+const ONGLETS = {
+  image:     {titre:"Image",            note:"Modèle : Soul. Image en 720p.",                                   duree:false, resolution:false, format:true},
+  video:     {titre:"Vidéo",            note:"Modèle : Kling 3.0 (texte vers vidéo), sans son. Kling 3.0 n'a pas de réglage de résolution.", duree:true, resolution:false, format:true},
+  video_son: {titre:"Vidéo avec son",   note:"Modèle : Seedance 2.5 (texte vers vidéo), avec son.",            duree:true,  resolution:true,  format:true},
+  animer:    {titre:"Animer une image", note:"Modèle : Kling 3.0 (image vers vidéo). Le format suit celui de l'image.", duree:true, resolution:false, format:false},
+};
+const etat = {onglet:"video", format:"16:9", duree:"5", resolution:"720p", image:null};
+const $ = id => document.getElementById(id);
+const usd = n => (n ?? 0).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:4}) + " $";
+const montrer = (id,v=true)=>$(id).classList.toggle("cache",!v);
+const echapper = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function dessinerOnglets(){
+  $("onglets").innerHTML = Object.entries(ONGLETS).map(([k,o])=>
+    `<button class="onglet ${k===etat.onglet?"actif":""}" data-k="${k}">${o.titre}</button>`).join("");
+  $("onglets").querySelectorAll("button").forEach(b=>b.onclick=()=>{etat.onglet=b.dataset.k;reinit();});
+}
+function reinit(){
+  const o = ONGLETS[etat.onglet];
+  dessinerOnglets();
+  montrer("bloc-format",o.format); montrer("bloc-duree",o.duree); montrer("bloc-resolution",o.resolution);
+  montrer("zone-image",etat.onglet==="animer");
+  $("note-modele").textContent = o.note;
+  $("prix").textContent = "";
+  if(etat.onglet==="animer") chargerImagesDispo();
+}
+document.querySelectorAll(".choix").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+  g.querySelectorAll("button").forEach(x=>x.classList.remove("actif")); b.classList.add("actif");
+  etat[g.dataset.nom]=b.dataset.v; $("prix").textContent="";
+}));
+
+function formulaire(){
+  return {onglet:etat.onglet, prompt:$("prompt").value, format:etat.format, duree:etat.duree,
+          resolution:etat.resolution, image:etat.image};
+}
+async function appeler(url,corps){
+  const r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corps)});
+  const d = await r.json().catch(()=>({erreur:"Réponse illisible du serveur."}));
+  if(!r.ok) throw new Error(d.erreur || ("Erreur "+r.status));
+  return d;
+}
+function afficherErreur(msg){ $("erreur").textContent="❌ "+msg; montrer("erreur"); montrer("progression",false); montrer("resultat",false); }
+function json(o){ return JSON.stringify(o,null,2); }
+
+$("btn-estimer").onclick = async ()=>{
+  montrer("erreur",false); $("prix").textContent="Calcul en cours…";
+  try{
+    const d = await appeler("/api/estimer",formulaire());
+    $("prix").innerHTML = `Coût estimé : <strong>${usd(parseFloat(d.usd))}</strong> <span class="note">(${echapper(d.credits)} crédits)</span>`;
+    $("json-requete").textContent=json(d.requete); $("json-reponse").textContent=json(d.reponse);
+  }catch(e){ $("prix").textContent=""; afficherErreur(e.message); }
+};
+
+let minuteur=null;
+$("btn-generer").onclick = async ()=>{
+  montrer("erreur",false); montrer("resultat",false);
+  $("btn-generer").disabled=true;
+  try{
+    const {id} = await appeler("/api/generer",formulaire());
+    montrer("progression"); suivre(id);
+  }catch(e){ afficherErreur(e.message); $("btn-generer").disabled=false; }
+};
+function suivre(id){
+  clearInterval(minuteur);
+  let progres=5;
+  minuteur=setInterval(async()=>{
+    try{
+      const t = await (await fetch("/api/taches/"+id)).json();
+      $("etape").textContent=t.etape||"…"; $("temps").textContent=t.ecoule?`${Math.round(t.ecoule)} s`:"";
+      if(t.requete) $("json-requete").textContent=json(t.requete);
+      if(t.reponse) $("json-reponse").textContent=json(t.reponse);
+      if(t.etat==="termine"||t.etat==="echec"){
+        clearInterval(minuteur); $("btn-generer").disabled=false;
+        if(t.etat==="echec"){ afficherErreur(t.erreur); } else {
+          $("remplissage").style.width="100%"; montrer("progression",false); afficherResultat(t);
+          chargerHistorique();
+        }
+        return;
+      }
+      const cible = t.etape?.startsWith("Génération")?90:t.etape?.startsWith("En file")?30:15;
+      progres = Math.min(cible, progres + (cible-progres)*0.08 + 0.3);
+      $("remplissage").style.width=progres+"%";
+    }catch(e){ /* on réessaie au prochain tour */ }
+  },1000);
+}
+function afficherResultat(t){
+  const src="/fichiers/"+encodeURIComponent(t.fichier);
+  $("media").innerHTML = t.type==="image" ? `<img src="${src}" alt="Résultat">` : `<video src="${src}" controls autoplay loop></video>`;
+  $("btn-telecharger").href=src+"?telecharger=1"; $("btn-telecharger").download=t.fichier;
+  $("info-resultat").textContent=`Enregistré dans generations/${t.fichier}`+(t.cout_usd!=null?` — coût estimé : ${usd(t.cout_usd)}`:"");
+  montrer("resultat");
+}
+
+function vignette(e,extra=""){
+  const src="/fichiers/"+encodeURIComponent(e.fichier);
+  const m = e.type==="image"?`<img src="${src}" alt="">`:`<video src="${src}" muted preload="metadata"></video>`;
+  return `<div class="vignette ${extra}" data-f="${echapper(e.fichier)}">${m}<div><strong>${echapper(e.modele)}</strong><br>${e.cout_usd!=null?usd(e.cout_usd):"coût inconnu"}</div></div>`;
+}
+async function chargerHistorique(){
+  const d = await (await fetch("/api/historique")).json();
+  $("total").textContent="Total dépensé : "+usd(d.total_usd);
+  $("historique").innerHTML=d.historique.map(e=>vignette(e)).join("");
+  montrer("historique-vide",d.historique.length===0);
+  $("historique").querySelectorAll(".vignette").forEach(v=>v.onclick=()=>{
+    const e=d.historique.find(x=>x.fichier===v.dataset.f);
+    $("media").innerHTML = e.type==="image"?`<img src="/fichiers/${encodeURIComponent(e.fichier)}">`:`<video src="/fichiers/${encodeURIComponent(e.fichier)}" controls></video>`;
+    $("btn-telecharger").href="/fichiers/"+encodeURIComponent(e.fichier)+"?telecharger=1";
+    $("info-resultat").textContent=e.prompt; montrer("resultat"); scrollTo({top:$("resultat").offsetTop-20,behavior:"smooth"});
+  });
+  return d;
+}
+async function chargerImagesDispo(){
+  const d = await (await fetch("/api/historique")).json();
+  const imgs=d.historique.filter(e=>e.type==="image");
+  $("images-dispo").innerHTML=imgs.map(e=>vignette(e,e.fichier===etat.image?"choisie":"")).join("");
+  montrer("aucune-image",imgs.length===0);
+  $("images-dispo").querySelectorAll(".vignette").forEach(v=>v.onclick=()=>{
+    etat.image=v.dataset.f; $("prix").textContent="";
+    $("images-dispo").querySelectorAll(".vignette").forEach(x=>x.classList.toggle("choisie",x===v));
+  });
+}
+
+(async()=>{
+  const s = await (await fetch("/api/etat")).json();
+  if(!s.cle_presente){ $("bandeau").textContent="⚠ Clé Higgsfield absente : ouvre le fichier .env.local, remplis la ligne HF_KEY= (format cle-id:cle-secret), enregistre, puis relance l'application."; montrer("bandeau"); }
+  reinit(); chargerHistorique();
+})();
+</script>
+</body>
+</html>

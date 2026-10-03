@@ -1,0 +1,30 @@
+MON STUDIO B-ROLL
+=================
+Application locale (en français) pour générer des images et des vidéos
+avec l'API Higgsfield. Les appels à l'API se font côté serveur ; la clé
+n'est jamais envoyée au navigateur.
+
+PREMIÈRE FOIS
+1. Ouvre le fichier .env.local (à la racine du dépôt, un niveau au-dessus
+   de ce dossier) et remplis la ligne :
+       HF_KEY=cle-id:cle-secret
+   (la clé se crée sur https://cloud.higgsfield.ai). Ce fichier n'est jamais
+   envoyé sur GitHub (il est dans .gitignore).
+2. Il faut Python 3.8 ou plus récent.
+
+RELANCER L'APPLICATION EN UNE COMMANDE
+    ./mon-studio-broll/lancer.sh
+(depuis la racine du dépôt, ou ./lancer.sh depuis ce dossier)
+
+Puis ouvre dans ton navigateur :  http://127.0.0.1:5000
+Pour arrêter : Ctrl+C dans le terminal.
+
+OÙ SONT MES FICHIERS ?
+Dans le dossier generations/ (avec historique.json).
+Higgsfield ne garde les fichiers que 7 jours : ils sont donc copiés ici.
+
+NOTES
+- Kling 3.0 n'a pas de réglage de résolution (le choix 720p/1080p n'existe
+  que pour Seedance 2.5).
+- Les coûts affichés sont les estimations données par l'API juste avant
+  la génération. Les générations échouées ou modérées ne sont pas facturées.
